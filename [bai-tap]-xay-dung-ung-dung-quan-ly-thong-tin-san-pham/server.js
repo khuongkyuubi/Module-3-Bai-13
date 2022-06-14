@@ -35,7 +35,10 @@ let server = http.createServer(async (req, res) => {
             if (method === "GET") {
                 let html = '';
                 try {
-                    const selectSql = `SELECT * FROM products`;
+                    // safe from unescaped input
+                    const sql = `SELECT * FROM ??`;
+                    const selectSql = mysql.format(sql, ["products"]);
+
                     products = await query(selectSql);
                 } catch (err) {
                     console.log(err.message);
@@ -93,7 +96,8 @@ let server = http.createServer(async (req, res) => {
                 req.on('end', async () => {
                     let product = qs.parse(data);
                     try {
-                        const insertSql = `INSERT INTO products (name, price) VALUES ("${product["name"]}", ${parseInt(product["price"])})`;
+                        const sql = `INSERT INTO ?? (name, price) VALUES (?, ?)`;
+                        const insertSql = mysql.format(sql, ["products", product["name"], parseInt(product["price"])]);
                         await query(insertSql);
 
                     } catch (err) {
@@ -115,7 +119,9 @@ let server = http.createServer(async (req, res) => {
         case "/delete":
             if (method === "GET") {
                 let html = '';
-                const selectProductSql = `SELECT * FROM products WHERE id = ${id} LIMIT 1;`;
+                const sql = `SELECT * FROM ?? WHERE ?? = ? LIMIT 1;`;
+                // const selectProductSql = `SELECT * FROM products WHERE id = ${id} LIMIT 1;`;
+                const selectProductSql = mysql.format(sql, ["products", "id", parseInt(id)]);
                 const product = (await query(selectProductSql))[0];
                 try {
                     html += '<tr>';
@@ -147,7 +153,9 @@ let server = http.createServer(async (req, res) => {
                 return res.end();
 
             } else {
-                const selectProductSql = `DELETE FROM products WHERE id = ${id} ; `;
+                const sql = `DELETE FROM ?? WHERE ?? = ?; `;
+                // const selectProductSql = `DELETE FROM products WHERE id = ${id} ; `;
+                const selectProductSql = mysql.format(sql, ["products", "id", parseInt(id)]);
                 try {
                     await query(selectProductSql);
                 } catch (err) {
@@ -164,7 +172,9 @@ let server = http.createServer(async (req, res) => {
             if (method === "GET") {
                 let html = '';
                 try {
-                    const selectProductSql = `SELECT * FROM products WHERE id = ${id} LIMIT 1`;
+                    const sql = `SELECT * FROM ?? WHERE ?? = ? LIMIT 1`;
+                    // const selectProductSql = `SELECT * FROM products WHERE id = ${id} LIMIT 1`;
+                    const selectProductSql = mysql.format(sql, ["products", "id", parseInt(id)]);
                     let product = (await query(selectProductSql))[0];
                     fs.readFile('./views/update.html', 'utf-8', function (err, data) {
                         res.writeHead(200, {'Content-Type': 'text/html'});
@@ -191,9 +201,11 @@ let server = http.createServer(async (req, res) => {
                 req.on('end', async () => {
                     let product = qs.parse(data);
                     try {
-                        const updateSql = `UPDATE products 
-                                           SET name = '${product["name"]}',price = ${product["price"]}
-                                           WHERE id = ${id} `;
+
+                        const sql = `UPDATE ?? 
+                                           SET ?? = ? ,?? = ?
+                                           WHERE ?? = ? `;
+                        const updateSql = mysql.format(sql, ["products", "name", product["name"], "price", product["price"], "id", parseInt(id)]);
                         await query(updateSql);
 
                     } catch (err) {
